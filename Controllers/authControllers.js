@@ -1,9 +1,48 @@
 const User = require('../Models/Users');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken')
+const WifiConfig = require('../Models/Users')
 
 const generarToken = (id) =>{
     return jwt.sign({id}, process.env.JWT_SECRET,{expiresIn:'1d'})
+}
+
+exports.updateDate = async(req,res)=>{
+    const {nombreCuenta,ssid, password} = req.body;
+    try{
+        const config = await WifiConfig.create(
+            {
+                nombreCuenta,
+                ssid,
+                password,
+                updateAt: new Date()
+            }
+        )
+        res.status(200).json({message:'Nuevos datos guardados'})
+    }
+    catch(err){
+        res.status(500).json({message:'Error al guardar en la base de datos', err:err.message})
+    }
+}
+
+exports.current = async(req,res)=>{
+    try{
+        const config = await WifiConfig.findOne();
+        if(!config) return res.status(404).json({message:'No hay configuracion guardada'})
+            res.status(200).json(config)
+    }catch(err){
+        res.status(500).json({message: 'Error al obtener datos', err: err.message})
+    }
+}
+
+exports.users = async(req,res)=>{
+try{
+    const users = await User.find()
+    res.status(200).json(users)
+}
+catch(err){
+    res.status(500).json({message:"Error al obtener ususario", err: err.message})
+}
 }
 
 exports.login = async(req, res) => {
@@ -28,14 +67,15 @@ exports.login = async(req, res) => {
 }
 
 exports.changepassword = async(req, res) => {
-    const {newPassword, repeatPassword,oldPassword} = req.body;
+    const {newPassword, repeatPassword, nombreUsuarioFactura, nombrewIFI} = req.body;
 
     try{
         const user = await User.findById(req.user.id);
         if(!user) return res.status(404).json({message:'Usuario no encontrado'})
 
-        const isMatch = await bcrypt.compare(oldPassword, user.password)
+        const isMatch = await bcrypt.compare(nombreUsuarioFactura, user.password)
         if(!isMatch) return res.status(404).json({message:'Contraseña incorrecta'})
+        
 
         if(newPassword != repeatPassword){
             return res.status(400).json({message: "La neuva contraseña no coincide  "})
