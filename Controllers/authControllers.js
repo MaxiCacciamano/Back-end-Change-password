@@ -8,7 +8,13 @@ const generarToken = (id) =>{
 }
 
 exports.updateDate = async(req,res)=>{
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
     const {nombreCuenta,ssid, password} = req.body;
+    if(!passwordRegex.test(password)){
+        return res.status(400).send({
+            message: 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número.'
+        })
+    }
     try{
         const config = await WifiConfig.create(
             {
@@ -18,7 +24,7 @@ exports.updateDate = async(req,res)=>{
                 updateAt: new Date()
             }
         )
-        res.status(200).json({message:'Nuevos datos guardados'})
+        res.status(200).json({message:'Nuevos datos guardados   '})
     }
     catch(err){
         res.status(500).json({message:'Error al guardar en la base de datos', err:err.message})
