@@ -1,16 +1,20 @@
 const jwt = require('jsonwebtoken');
+const User = require('../Models/User');
 
-const authMiddleware = (req, res, next)=>{
-    const token = req.header('Authorization')?.split(' ')[1]
-    if(!token) return res.status(401).json({message: 'Acceso denegado. Token no proporionado'})
-
-        try{
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            req.user = decoded  //id:..., email:....
-            next()
-        }catch(err){
-            res.status(400).json({message:'Token invalido'})
-        }
+exports.auth = async (req, res, next)=>{
+    if(!req.session.user){
+        return res.status(404).json({message:'Acceso no autorizado'})
+    }
+    req.user = req.session.user;
+    // console.log('Session auth', req.user)
+    next();
 }
 
-module.exports = authMiddleware
+exports.adminOnly = (req, res, next) =>{
+    // console.log("Usuario atuenticado", req.user)
+    if(req.session.user?.role !== "admin"){
+        return res.status(404).json({msg:"Seccion solo para administradores"})
+    }
+    next();
+}
+

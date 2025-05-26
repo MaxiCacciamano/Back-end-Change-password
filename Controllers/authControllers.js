@@ -1,7 +1,9 @@
-const User = require('../Models/Users');
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken')
-const WifiConfig = require('../Models/Users')
+const Update = require('../Models/update');
+const User = require('../Models/User');
+const update = require('../Models/update');
 
 const generarToken = (id) =>{
     return jwt.sign({id}, process.env.JWT_SECRET,{expiresIn:'1d'})
@@ -16,7 +18,7 @@ exports.updateDate = async(req,res)=>{
         })
     }
     try{
-        const config = await WifiConfig.create(
+        const config = await Update.create(
             {
                 nombreCuenta,
                 ssid,
@@ -33,8 +35,8 @@ exports.updateDate = async(req,res)=>{
 
 exports.current = async(req,res)=>{
     try{
-        const config = await WifiConfig.findOne();
-        if(!config) return res.status(404).json({message:'No hay configuracion guardada'})
+        const config = await Update.find();
+        if(!config) return res.status(404).json({message:'No hay configuracion guardadas'})
             res.status(200).json(config)
     }catch(err){
         res.status(500).json({message: 'Error al obtener datos', err: err.message})
@@ -43,7 +45,7 @@ exports.current = async(req,res)=>{
 
 exports.users = async(req,res)=>{
 try{
-    const users = await User.find()
+    const users = await Update.find()
     res.status(200).json(users)
 }
 catch(err){
@@ -52,25 +54,35 @@ catch(err){
 }
 
 exports.login = async(req, res) => {
-    const {email, password} = req.body;
-
+    
+    const {username, password} = req.body;
     try{
-        const user = await User.findOne({email});
-        if(!user) return res.status(404).json({message: 'Usuario no encontrado'})
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if(!isMatch) return res.status(404).json({message: 'Contraseña incorrecta'})
-        
-        const token = jwt.sign(
-            {id:user._id, email: user.email},
-            process.env.JWT_SECRET,
-            {expiresIn: '1h'}
-        )
-        res.status(200).json({message: 'Aca esta tu token', token})
+        const user = await User.findOne({username});
+        if(!user) return res.status(404).json({msg:"Usuario no ecnontrado"})
+    
+        const isMatch = await user.comparePassword(password)
+        if(!isMatch) return res.status(404).json({msg:"Contrasela incorrecta"})
+    
+        req.session.user = {
+            id: user._id,
+            username: user.username,
+            password: user.password,
+            role: user.role
+        };
+        // console.log(req.session.user)
+        res.json({message:"Login exitoso", user:req.session.user});
     }catch(err){
-        res.status(500).json({message:'Error en el servidor', error: err.message})
+        console.log(err.message, "Error en el login")
     }
 }
+
+exports.logout = async(req, res )=>{
+    req.session.destroy((err)=>{
+        if(err) return res.status(500).json({message:"Error al cerrar sesion"})
+        res.json({message:"Sesion cerrada correctamente"})
+    })
+}
+
 
 exports.changepassword = async(req, res) => {
     const {newPassword, repeatPassword, nombreUsuarioFactura, nombrewIFI} = req.body;
@@ -99,24 +111,36 @@ exports.changepassword = async(req, res) => {
 
 exports.register = async(req, res)=>{
     try{
-        const{email, password} = req.body
+        const{username, password} = req.body
 
-        const usuarioExistente = await User.findOne({email});
-        if(usuarioExistente){
-            return res.status(400).json({message:'El usuario ya existe'});
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const nuevoUsuario = new User({email, password: hashedPassword});
-        await nuevoUsuario.save();
-
-        const token = generarToken(nuevoUsuario._id);
-        res.status(201).json({token});
+        const hashedPassword = await bcrypt.hash(password, 10)
+        const nuevoadmin = new User({username, password:hashedPassword, role:'admin'})
+        await nuevoadmin.save();
+        res.status(201).json({message:'admin creado'})
     }catch(err){
         console.log(err)
-        res.status(500).json({message:'Error al registrar usuario'});
+        res.status(500).json({
+            message:'Error al registrar usuario',
+            error:err.message
+        });
     }
 };
+
+exports.getUpdateForAdmin = async(req, res)=>{
+    try{
+        if(req.user.role !== "admin"){
+            return res.status(403).json({message:"Acceso denegado"})
+        }
+        const updates = await Update.find();
+        res.status(200).json(updates)
+    }
+    catch(err){
+        res.status(404).json({
+            message:"Error al traer datos del update",
+            error: err.message
+        })
+    }
+}
 
 
 

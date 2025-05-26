@@ -1,17 +1,26 @@
 require('dotenv').config();
 const express = require('express');
+const session = require('express-session')
+
 const mongoose = require('mongoose');
 const authRoutes = require('./routes/authRoutes');
 const cors = require('cors')
 
 const app = express()
 
+app.use(express.json());
 app.use(cors({
-  origin:'*', //Front
+  origin:'http://localhost:3000', //Front
   credentials: true //si se utilizan cookies o auth headers
 }))
 
-app.use(express.json());
+app.use(session({
+  secret:process.env.JWT_SECRET,
+  resave:false,
+  saveUninitialized:false,
+  cookie:{secure:false} //secure: true solo con HTTPS
+}))
+
 
 mongoose.connect(process.env.MONGO_URL)
   .then(()=>console.log('MongoDB Atlas conectado'))
