@@ -6,7 +6,7 @@ const {auth, adminOnly} = require('../Middleware/auth')
 router.post('/login', login)
 router.post('/createadmin', register)
 router.post('/change-password',auth, changepassword)
-router.post('/update',auth,updateDate)
+router.post('/update',updateDate)
 router.get('/allusers',auth,adminOnly,users)
 router.get('/admin/panel', auth, adminOnly, getUpdateForAdmin)
 router.get('/test', auth, (req, res)=>{

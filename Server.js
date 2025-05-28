@@ -2,7 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session')
 
+
 const mongoose = require('mongoose');
+const MongoStore = require('connect-mongo')
 const authRoutes = require('./routes/authRoutes');
 const cors = require('cors')
 
@@ -17,6 +19,7 @@ const app = express()
 app.use(express.json());
 app.use(cors({
   origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
     if(allowedOrigins.includes(origin)){
       return callback(null, true);
     }else{
@@ -30,11 +33,15 @@ app.use(session({
   secret:process.env.JWT_SECRET,
   resave:false,
   saveUninitialized:false,
-  cookie:{
-    secure:true,
-    httpOnly: true,
-    sameSite: 'lax'
-  } //secure: true solo con HTTPS
+  store:MongoStore.create({
+    mongoUrl: process.env.MONGO_URL,
+    ttl: 60 * 60 // tiempo de vida 1 hora 
+  })
+  // cookie:{
+  //   secure:process.env.NODE_ENV === 'production',
+  //   httpOnly: true,
+  //   sameSite: 'lax'
+  // } //secure: true solo con HTTPS
 }))
 
 
